@@ -4,23 +4,37 @@
 #define DEFAULT_DELAY 1000
 #define STOP 90
 
+// These predeterminations are using for clarifying all pins in one spot: 
+
+#define conveyorButtonPin 0 
+#define liftUpButtonPin 1 
+#define liftDownButtonPin 2 
+#define controlButtonPin 3 
+#define alertButtonPin 4
+
+#define conveyorServoPin 1 
+#define initialGrabServoPin 2 
+#define liftServoPin 3 
+#define secondaryGrabServoPin 4 
+#define railServoPin 5
+
 		//////////////////////////////////////////////////////////////////////
 		// * * * * * * * * * * VARIABLES DESCRIPTION * * * * * * * * * * *  //
-		//																	//
-		// I. SERVOMOTORS:  												//
-		// conveyorServo - conveyor											//
-		// initialGrabServo - "initial" grab								//
-		// liftServo - lift													//
-		// secondaryGrabServo - "secondary"	grab							//
-		// railServo - the guide rail's "move out"							//
-		// 																	//
-		// II. BUTTONS (pins): 												//
-		// conveyorButton - limit switch for conveyor 						//
-		// liftUpButton - limit switch for lift - upper part 				//
-		// liftDownButton - limit switch for lift - bottom part 			//
-		// controlButton - initiate next action manually 					//
-		// alertButton - notice about moving of the device to frame			//
-		//																	//
+		//
+		// I. SERVOMOTORS:
+		// conveyorServo - conveyor
+		// initialGrabServo - "initial" grab
+		// liftServo - lift
+		// secondaryGrabServo - "secondary"	grab
+		// railServo - the guide rail's "move out"
+		//
+		// II. BUTTONS (pins):
+		// conveyorButton - limit switch for conveyor
+		// liftUpButton - limit switch for lift - upper part
+		// liftDownButton - limit switch for lift - bottom part
+		// controlButton - initiate next action manually
+		// alertButton - notice about moving of the device to frame
+		//
 		// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  //
 		//////////////////////////////////////////////////////////////////////
 
@@ -31,105 +45,136 @@ Multiservo secondaryGrabServo;
 Multiservo railServo; 
 
 
-int conveyorButton = 0; 
-int liftUpButton = 1; 
-int liftDownButton = 2; 
-int controlButton = 3; 
-int alertButton = 4; 
+int conveyorButton = conveyorButtonPin; 
+int liftUpButton = liftUpButtonPin; 
+int liftDownButton = liftDownButtonPin; 
+int controlButton = controlButtonPin; 
+int alertButton = alertButtonPin; 
 
 
-//Just initiate all our servomotors:// 
-									//
-void setup (void) { 				//
-	conveyorServo.attach(1);		//
-	initialGrabServo.attach(2);		//
-	liftServo.attach(3);			//
-	secondaryGrabServo.attach(4);	//
-	railServo.attach(5);			//
-}									//
-									//
-//----------------------------------//
+//Just initiate all our servomotors: 
+									
+void setup (void) {
+	conveyorServo.attach(conveyorServoPin);
+	initialGrabServo.attach(initialGrabServoPin);
+	liftServo.attach(liftServoPin);
+	secondaryGrabServo.attach(secondaryGrabServoPin);
+	railServo.attach(railServoPin);
+}
 
-
+		////////////////////////////////////////////////////////////////////////////////
+		// * * * * * * * * * * LOOP DESCRIPTION * * * * * * * * * * * * * * * * * * * //
+		//
+		// In general the Loop could be separated in five stages:
+		//
+		// I. Conveyor: 
+		// Some button (seems like control one) determines the start of our process. 
+		// The conveyor will work until nearest bag touches corresponding limit switch. 
+		//
+		// II. Lift: 
+		// When nearest bag touches the limit switch, lift will start to fall till another 
+		// limit switch stops it. It would be nice if grab mechanism will stop accurately at 
+		// our bag. 
+		// After grab process lift will move up for moving into framework. 
+		//
+		// III. Initial grab:
+		// When the mechanism disposed at the bag, take in the bag with moving in hooks 
+		//
+		// IV. Secondary grab: 
+		// ...
+		//
+		// V. Move to the framework: 
+		// 
+		//
+		//
+		// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+		/////////////////////////////////////////////////////////////////////////////////
 
 void loop (void) {
 	
 	if (digitalRead(controlButton) == HIGH)  {
 		do    {
-			delay(50); // wait for stabilize
-			conveyorServo.write (180); // запуск конвеера
+			delay(50); // Stabilising
+			conveyorServo.write (180); // Conveyor's initiate 
 		}
-		while (digitalRead(conveyorButton) == LOW); // работает до тех пор, пока кнопка не нажата
-		conveyorServo.write(STOP);// остановить конвеер
+		while (digitalRead(conveyorButton) == LOW); // Work till the button's press
+		conveyorServo.write(STOP);
 		delay(DEFAULT_DELAY);
 	} 
 	else	{
 		return;
 	}
-  // сделать через goto? label: или switch case
+  
 
 
 label2:
 	if (digitalRead(controlButton == HIGH))
 	{
 		do {
-			liftServo.write(0); // опустить подхват вниз
+			liftServo.write(0); // Move down
 		} 
-		while (liftDownButton != HIGH);
+		while (liftDownButton != HIGH); // Again we're waiting for limit switch
 	
 		liftServo.write (STOP);
 		delay(DEFAULT_DELAY);
 	} 
-	else {
+	/*else {
 		goto label2;
-	}
+	}*/
 
 	
-	initialGrabServo.write(180); // подхват мешка
-	//проверять не проверять??? servomotor постоянный или угловой?
+	initialGrabServo.write(180); // Initiate grab - do we need to check the succcess?? 
+
 	delay (DEFAULT_DELAY);
 
 	
 	do	{
-		liftServo.write (180); // поднять мешок вверх в течении трех секунд// проверить то, что мешок зацепился???
+		liftServo.write (180); // Lift bag up till...
 	} 
-	while (liftUpButton != HIGH);
-		
+	while (liftUpButton != HIGH); // ... till the limit switch's press
 	liftServo.write(STOP);
 	delay (DEFAULT_DELAY);
-	initialGrabServo.write (100); // раздвинул ушки мешка
+	
+	initialGrabServo.write (100); // Spread out eyelets
 	delay (DEFAULT_DELAY);
-	liftServo.write (180);// еще приподнялся в течении трёх секунд
+	
+	liftServo.write (180); // Again lift up
 	delay (3000);
-	liftServo.write (STOP); // остановился
-	initialGrabServo.write (80);// сдвинул ушки мешка
-	liftServo.write (0); //опустился в течении трех секунд
-	liftServo.write (STOP);//остановился
-	initialGrabServo.write (180); // расправил подхват
+	liftServo.write (STOP); // Stop
+	
+	initialGrabServo.write (80); // Budge the eyelets
+	liftServo.write (0); // Lift down within 3 seconds
+	liftServo.write (STOP); // Stop
+	initialGrabServo.write (180); // Spread out the grab
 	
 	do {
-		liftServo.write (180); // поднять механизм подхвата вверх
+		liftServo.write (180); // Lift up the mechanism 
 	} 
 	while (liftUpButton != HIGH);
 	liftServo.write(STOP);
 	delay (DEFAULT_DELAY);
 
-	// въезд в раму
-	secondaryGrabServo.write (180); //собрали механизм загонки мешка
+	
+	// - - - Penetration into the framework: - - - 
+	
+	secondaryGrabServo.write (180); // Initiate the mechanism of bag's move in
 	delay(DEFAULT_DELAY);
 	do	{
 		railServo.write (180);
-	} while (digitalRead(alertButton == HIGH)); // сработал концевик
-	delay (DEFAULT_DELAY); // завели мешок с машинкой подхвата в раму
+	} while (digitalRead(alertButton == HIGH)); // Limit switch is on?? 
+	delay (DEFAULT_DELAY); 
+	// Is mechanism in the framework? 
 
-	// переносим ушки мешка на раму
+	
+	// - - - Transfer eyelets from the mechanism to framework: - - - 
+	
 	secondaryGrabServo.write (0);
 	delay (DEFAULT_DELAY);
-	// мешок в раме
+	// Is bag in framework? 
 
-	railServo.write (0); // в течении 5 секунд машинка выезжает из рамы
+	railServo.write (0); // Move out from the framework (within 5 seconds)
 	delay (5000);
-	railServo.write (STOP); // установлена начальная позицию для машинки
+	railServo.write (STOP); // Set up initial position
 
 }
 
